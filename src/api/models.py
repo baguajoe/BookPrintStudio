@@ -6,7 +6,7 @@ db = SQLAlchemy()
 
 class User(db.Model):
     __tablename__ = "users"
-    
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True, nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
@@ -28,8 +28,9 @@ class User(db.Model):
             "username": self.username,
             "email": self.email,
             "first_name": self.first_name,
-            "last_name": self.last_name
+            "last_name": self.last_name,
         }
+
 
 class Product(db.Model):
     __tablename__ = "products"
@@ -47,13 +48,6 @@ class Product(db.Model):
 
     __mapper_args__ = {"polymorphic_on": product_type, "polymorphic_identity": "product"}
 
-    @classmethod
-    def create(cls, **kwargs):
-        instance = cls(**kwargs)
-        db.session.add(instance)
-        db.session.commit()
-        return instance
-
     def to_dict(self):
         return {
             "id": self.id,
@@ -63,8 +57,9 @@ class Product(db.Model):
             "sku": self.sku,
             "price": str(self.price),
             "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat()
+            "updated_at": self.updated_at.isoformat(),
         }
+
 
 class Book(Product):
     __tablename__ = "books"
@@ -74,6 +69,8 @@ class Book(Product):
     author = db.Column(db.String(255), nullable=False)
     page_count = db.Column(db.Integer, nullable=False)
     cover_type = db.Column(db.String(50), nullable=False)
+    trim_size = db.Column(db.String(50), nullable=False)
+    paper_type = db.Column(db.String(50), nullable=False)
 
     __mapper_args__ = {"polymorphic_identity": "book"}
 
@@ -83,9 +80,12 @@ class Book(Product):
             "isbn": self.isbn,
             "author": self.author,
             "page_count": self.page_count,
-            "cover_type": self.cover_type
+            "cover_type": self.cover_type,
+            "trim_size": self.trim_size,
+            "paper_type": self.paper_type,
         }
         return {**base_dict, **book_dict}
+
 
 class ComicBook(Product):
     __tablename__ = "comic_books"
@@ -94,6 +94,8 @@ class ComicBook(Product):
     issue_number = db.Column(db.Integer, nullable=False)
     series_title = db.Column(db.String(255), nullable=False)
     cover_type = db.Column(db.String(50), nullable=True)
+    trim_size = db.Column(db.String(50), nullable=False)
+    page_count = db.Column(db.Integer, nullable=False)
 
     __mapper_args__ = {"polymorphic_identity": "comic_book"}
 
@@ -102,9 +104,12 @@ class ComicBook(Product):
         comic_dict = {
             "issue_number": self.issue_number,
             "series_title": self.series_title,
-            "cover_type": self.cover_type
+            "cover_type": self.cover_type,
+            "trim_size": self.trim_size,
+            "page_count": self.page_count,
         }
         return {**base_dict, **comic_dict}
+
 
 class ChildrenBook(Book):
     __tablename__ = "children_books"
@@ -119,9 +124,10 @@ class ChildrenBook(Book):
         base_dict = super().to_dict()
         children_dict = {
             "age_group": self.age_group,
-            "illustration_style": self.illustration_style
+            "illustration_style": self.illustration_style,
         }
         return {**base_dict, **children_dict}
+
 
 class TShirt(Product):
     __tablename__ = "tshirts"
@@ -138,13 +144,34 @@ class TShirt(Product):
         tshirt_dict = {
             "size": self.size,
             "color": self.color,
-            "material": self.material
+            "material": self.material,
         }
         return {**base_dict, **tshirt_dict}
 
+
+class EBook(Product):
+    __tablename__ = "ebooks"
+
+    id = db.Column(db.Integer, db.ForeignKey("products.id"), primary_key=True)
+    file_format = db.Column(db.String(20), nullable=False)  # e.g., "PDF", "ePub", "MOBI"
+    download_url = db.Column(db.String(255), nullable=False)
+    file_size = db.Column(db.String(50), nullable=True)  # e.g., "2MB"
+
+    __mapper_args__ = {"polymorphic_identity": "ebook"}
+
+    def to_dict(self):
+        base_dict = super().to_dict()
+        ebook_dict = {
+            "file_format": self.file_format,
+            "download_url": self.download_url,
+            "file_size": self.file_size,
+        }
+        return {**base_dict, **ebook_dict}
+
+
 class Pricing(db.Model):
     __tablename__ = "pricing"
-    
+
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
     base_price = db.Column(db.DECIMAL(10, 2), nullable=False)
@@ -168,5 +195,5 @@ class Pricing(db.Model):
             "tax_rate": str(self.tax_rate),
             "final_price": str(self.final_price),
             "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat()
+            "updated_at": self.updated_at.isoformat(),
         }
