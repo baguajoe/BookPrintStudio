@@ -9,12 +9,12 @@ pricing_api = Blueprint("pricing_api", __name__)
 @api.route("/users", methods=["GET"])
 def get_users():
     users = User.query.all()
-    return jsonify([user.to_dict() for user in users])
+    return jsonify([user.to_dict() for user in users]), 200
 
 @api.route("/users/<int:user_id>", methods=["GET"])
 def get_user(user_id):
     user = User.query.get_or_404(user_id)
-    return jsonify(user.to_dict())
+    return jsonify(user.to_dict()), 200
 
 @api.route("/users", methods=["POST"])
 def create_user():
@@ -32,7 +32,21 @@ def create_user():
         return jsonify({"message": "User created successfully!", "user": user.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error creating user: {str(e)}"}), 400
+
+@api.route("/users/<int:user_id>", methods=["PUT"])
+def update_user(user_id):
+    user = User.query.get_or_404(user_id)
+    data = request.json
+    try:
+        for key, value in data.items():
+            if hasattr(user, key):
+                setattr(user, key, value)
+        db.session.commit()
+        return jsonify({"message": "User updated successfully!", "user": user.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error updating user: {str(e)}"}), 400
 
 @api.route("/users/<int:user_id>", methods=["DELETE"])
 def delete_user(user_id):
@@ -40,10 +54,10 @@ def delete_user(user_id):
     try:
         db.session.delete(user)
         db.session.commit()
-        return jsonify({"message": "User deleted successfully!"})
+        return jsonify({"message": "User deleted successfully!"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error deleting user: {str(e)}"}), 400
 
 
 # -------------------- Product Routes --------------------
@@ -55,12 +69,12 @@ def get_products():
         products = Product.query.filter_by(product_type=product_type).all()
     else:
         products = Product.query.all()
-    return jsonify([product.to_dict() for product in products])
+    return jsonify([product.to_dict() for product in products]), 200
 
 @api.route("/products/<int:product_id>", methods=["GET"])
 def get_product(product_id):
     product = Product.query.get_or_404(product_id)
-    return jsonify(product.to_dict())
+    return jsonify(product.to_dict()), 200
 
 @api.route("/products", methods=["POST"])
 def create_product():
@@ -86,7 +100,7 @@ def create_product():
         return jsonify({"message": f"{product_type.title()} created successfully!", "product": product.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error creating product: {str(e)}"}), 400
 
 @api.route("/products/<int:product_id>", methods=["PUT"])
 def update_product(product_id):
@@ -97,10 +111,10 @@ def update_product(product_id):
             if hasattr(product, key):
                 setattr(product, key, value)
         db.session.commit()
-        return jsonify({"message": "Product updated successfully!", "product": product.to_dict()})
+        return jsonify({"message": "Product updated successfully!", "product": product.to_dict()}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error updating product: {str(e)}"}), 400
 
 @api.route("/products/<int:product_id>", methods=["DELETE"])
 def delete_product(product_id):
@@ -108,10 +122,10 @@ def delete_product(product_id):
     try:
         db.session.delete(product)
         db.session.commit()
-        return jsonify({"message": "Product deleted successfully!"})
+        return jsonify({"message": "Product deleted successfully!"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error deleting product: {str(e)}"}), 400
 
 
 # -------------------- Pricing Routes --------------------
@@ -119,12 +133,12 @@ def delete_product(product_id):
 @pricing_api.route("/pricing", methods=["GET"])
 def get_pricing():
     pricing_records = Pricing.query.all()
-    return jsonify([pricing.to_dict() for pricing in pricing_records])
+    return jsonify([pricing.to_dict() for pricing in pricing_records]), 200
 
 @pricing_api.route("/pricing/<int:product_id>", methods=["GET"])
 def get_product_pricing(product_id):
     pricing = Pricing.query.filter_by(product_id=product_id).first_or_404()
-    return jsonify(pricing.to_dict())
+    return jsonify(pricing.to_dict()), 200
 
 @pricing_api.route("/pricing", methods=["POST"])
 def create_or_update_pricing():
@@ -146,7 +160,7 @@ def create_or_update_pricing():
         return jsonify({"message": "Pricing created/updated successfully!", "pricing": pricing.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error updating pricing: {str(e)}"}), 400
 
 @pricing_api.route("/pricing/<int:product_id>", methods=["DELETE"])
 def delete_pricing(product_id):
@@ -154,10 +168,10 @@ def delete_pricing(product_id):
     try:
         db.session.delete(pricing)
         db.session.commit()
-        return jsonify({"message": "Pricing deleted successfully!"})
+        return jsonify({"message": "Pricing deleted successfully!"}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error deleting pricing: {str(e)}"}), 400
 
 
 # -------------------- Utility Routes --------------------
@@ -166,6 +180,6 @@ def delete_pricing(product_id):
 def get_standard_specifications(product_type):
     try:
         products = Product.query.filter_by(product_type=product_type).all()
-        return jsonify([product.to_dict() for product in products])
+        return jsonify([product.to_dict() for product in products]), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": f"Error fetching specifications: {str(e)}"}), 400

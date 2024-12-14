@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
+# User Model
 class User(db.Model):
     __tablename__ = "users"
 
@@ -15,6 +16,8 @@ class User(db.Model):
     last_name = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, server_default=func.now())
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
+
+    orders = db.relationship("Order", back_populates="customer", cascade="all, delete")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -29,9 +32,12 @@ class User(db.Model):
             "email": self.email,
             "first_name": self.first_name,
             "last_name": self.last_name,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
         }
 
 
+# Base Product Model
 class Product(db.Model):
     __tablename__ = "products"
 
@@ -61,6 +67,7 @@ class Product(db.Model):
         }
 
 
+# Specialized Product Models
 class Book(Product):
     __tablename__ = "books"
 
@@ -111,24 +118,6 @@ class ComicBook(Product):
         return {**base_dict, **comic_dict}
 
 
-class ChildrenBook(Book):
-    __tablename__ = "children_books"
-
-    id = db.Column(db.Integer, db.ForeignKey("books.id"), primary_key=True)
-    age_group = db.Column(db.String(50), nullable=False)
-    illustration_style = db.Column(db.String(100), nullable=False)
-
-    __mapper_args__ = {"polymorphic_identity": "children_book"}
-
-    def to_dict(self):
-        base_dict = super().to_dict()
-        children_dict = {
-            "age_group": self.age_group,
-            "illustration_style": self.illustration_style,
-        }
-        return {**base_dict, **children_dict}
-
-
 class TShirt(Product):
     __tablename__ = "tshirts"
 
@@ -153,9 +142,9 @@ class EBook(Product):
     __tablename__ = "ebooks"
 
     id = db.Column(db.Integer, db.ForeignKey("products.id"), primary_key=True)
-    file_format = db.Column(db.String(20), nullable=False)  # e.g., "PDF", "ePub", "MOBI"
+    file_format = db.Column(db.String(20), nullable=False)
     download_url = db.Column(db.String(255), nullable=False)
-    file_size = db.Column(db.String(50), nullable=True)  # e.g., "2MB"
+    file_size = db.Column(db.String(50), nullable=True)
 
     __mapper_args__ = {"polymorphic_identity": "ebook"}
 
@@ -169,6 +158,31 @@ class EBook(Product):
         return {**base_dict, **ebook_dict}
 
 
+# Order Model
+class Order(db.Model):
+    __tablename__ = "orders"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    status = db.Column(db.String(50), nullable=False)
+    total_price = db.Column(db.DECIMAL(10, 2), nullable=False)
+    created_at = db.Column(db.DateTime, server_default=func.now())
+    updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
+
+    customer = db.relationship("User", back_populates="orders")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "customer_id": self.customer_id,
+            "status": self.status,
+            "total_price": str(self.total_price),
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+# Pricing Model
 class Pricing(db.Model):
     __tablename__ = "pricing"
 
@@ -197,3 +211,21 @@ class Pricing(db.Model):
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
+    
+class ChildrenBook(Book):
+    __tablename__ = "children_books"
+
+    id = db.Column(db.Integer, db.ForeignKey("books.id"), primary_key=True)
+    age_group = db.Column(db.String(50), nullable=False)
+    illustration_style = db.Column(db.String(100), nullable=False)
+
+    __mapper_args__ = {"polymorphic_identity": "children_book"}
+
+    def to_dict(self):
+        base_dict = super().to_dict()
+        children_dict = {
+            "age_group": self.age_group,
+            "illustration_style": self.illustration_style,
+        }
+        return {**base_dict, **children_dict}
+
